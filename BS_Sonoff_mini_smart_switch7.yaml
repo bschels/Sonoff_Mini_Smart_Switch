@@ -1,0 +1,234 @@
+blueprint:
+  name: Sonoff Mini Smart Switch Blueprint (Enhanced – Sensor Trigger)
+  description: >
+    This blueprint provides control over Sonoff devices using a sensor-based button press.
+    It supports multiple device categories (smart lights, smart fans, non-smart devices, etc.)
+    and offers refined fan control modes:
+    
+    - **manual:** Run the fan for a preset duration.
+    - **auto:** Activate the fan only if a humidity sensor’s reading exceeds a threshold.
+    - **both:** Turn the fan on immediately and, after the manual duration,
+      turn it off only if the humidity is below the threshold. This allows you to
+      use manual activation (for instance, when you want extra ventilation) while still
+      benefiting from auto control during a shower.
+    
+    For smart lights, the blueprint simply toggles the light.
+    For non‑smart devices, it will trigger a scene (if provided) or toggle the entity.
+  domain: automation
+  input:
+    # --- Sonoff Device Section ---
+    sonoff_model:
+      name: Sonoff Device Model
+      description: "Select your Sonoff device model."
+      default: MiniR4M
+      selector:
+        select:
+          options:
+            - MiniR4M
+            - MiniR4
+            - ZBMINIR2
+            - Other
+    action_sensor:
+      name: Action Sensor
+      description: >
+        Select the sensor entity that reports the button action.
+        (For example, a sensor that changes its state to "single" when pressed.)
+      selector:
+        entity:
+          domain: sensor
+    switch_mode:
+      name: Operating Mode
+      description: >
+        Choose the operating mode for how the target entity is controlled:
+        - **toggle:** Directly call the relevant service (e.g. toggle a light or run a fan sequence).
+        - **detached:** Fire an event for custom automations.
+      default: toggle
+      selector:
+        select:
+          options:
+            - toggle
+            - detached
+    target_entity:
+      name: Target Entity
+      description: "Select the entity you want to control (e.g., light, fan, switch, etc.)."
+      selector:
+        entity: {}
+    target_device_category:
+      name: Target Device Category
+      description: >
+        Select the category of the target device. This determines which service is used.
+      default: "Light (Smart)"
+      selector:
+        select:
+          options:
+            - "Light (Smart)"
+            - "Light (Non-Smart)"
+            - "Fan (Smart)"
+            - "Fan (Non-Smart)"
+            - "Other"
+    # --- Fan Control Options (only applicable for Fan (Smart)) ---
+    fan_control_mode:
+      name: Fan Control Mode
+      description: >
+        For a smart fan, choose how the fan should be controlled:
+        - **manual:** Run the fan for a preset duration.
+        - **auto:** Activate the fan only if humidity exceeds the threshold.
+        - **both:** Turn the fan on immediately, then after the manual duration,
+          turn it off only if humidity is below the threshold.
+      default: both
+      selector:
+        select:
+          options:
+            - manual
+            - auto
+            - both
+    fan_duration:
+      name: Fan Run Duration
+      description: "Time in seconds to run the fan in manual mode."
+      default: 60
+      selector:
+        number:
+          min: 1
+          max: 3600
+          unit_of_measurement: seconds
+    humidity_threshold:
+      name: Humidity Threshold
+      description: "In auto or both mode, the fan will remain on if humidity exceeds this value."
+      default: 60
+      selector:
+        number:
+          min: 0
+          max: 100
+          unit_of_measurement: '%'
+    sensor_entity:
+      name: Humidity Sensor
+      description: "(Optional) The humidity sensor entity used for auto fan control."
+      selector:
+        entity:
+          domain: sensor
+      default: ""
+    # --- Non-Smart Device Options ---
+    non_smart_scene:
+      name: Non-Smart Device Scene
+      description: >
+        (Optional) For non-smart devices, specify a scene to trigger.
+        Leave blank to use a simple toggle.
+      selector:
+        entity:
+          domain: scene
+      default: ""
+trigger:
+  - platform: state
+    entity_id: !input action_sensor
+    to: "single"
+condition: []
+action:
+  - choose:
+      # --- Toggle Mode ---
+      - conditions:
+          - condition: template
+            value_template: "{{ switch_mode == 'toggle' }}"
+        sequence:
+          - choose:
+              # --- Fan (Smart) Control ---
+              - conditions:
+                  - condition: template
+                    value_template: "{{ target_device_category == 'Fan (Smart)' }}"
+                sequence:
+                  - choose:
+                      # Fan Control: manual
+                      - conditions:
+                          - condition: template
+                            value_template: "{{ fan_control_mode == 'manual' }}"
+                        sequence:
+                          - service: fan.turn_on
+                            target:
+                              entity_id: !input target_entity
+                          - delay:
+                              seconds: !input fan_duration
+                          - service: fan.turn_off
+                            target:
+                              entity_id: !input target_entity
+                      # Fan Control: auto
+                      - conditions:
+                          - condition: template
+                            value_template: "{{ fan_control_mode == 'auto' }}"
+                        sequence:
+                          - condition: template
+                            value_template: >
+                              {% if sensor_entity != "" %}
+                                {{ states(sensor_entity) | float > humidity_threshold }}
+                              {% else %}
+                                false
+                              {% endif %}
+                          - service: fan.turn_on
+                            target:
+                              entity_id: !input target_entity
+                      # Fan Control: both (manual + auto)
+                      - conditions:
+                          - condition: template
+                            value_template: "{{ fan_control_mode == 'both' }}"
+                        sequence:
+                          - service: fan.turn_on
+                            target:
+                              entity_id: !input target_entity
+                          - delay:
+                              seconds: !input fan_duration
+                          - choose:
+                              - conditions:
+                                  - condition: template
+                                    value_template: >
+                                      {% if sensor_entity != "" %}
+                                        {{ states(sensor_entity) | float <= humidity_threshold }}
+                                      {% else %}
+                                        true
+                                      {% endif %}
+                                sequence:
+                                  - service: fan.turn_off
+                                    target:
+                                      entity_id: !input target_entity
+                              - default: []
+                  # --- End Fan (Smart) ---
+              # --- Smart Light Control ---
+              - conditions:
+                  - condition: template
+                    value_template: "{{ target_device_category == 'Light (Smart)' }}"
+                sequence:
+                  - service: light.toggle
+                    target:
+                      entity_id: !input target_entity
+              # --- Non-Smart Devices and Other ---
+              - conditions:
+                  - condition: template
+                    value_template: "{{ target_device_category in ['Light (Non-Smart)', 'Fan (Non-Smart)', 'Other'] }}"
+                sequence:
+                  - choose:
+                      - conditions:
+                          - condition: template
+                            value_template: "{{ non_smart_scene != '' }}"
+                        sequence:
+                          - service: scene.turn_on
+                            target:
+                              entity_id: !input non_smart_scene
+                      - default:
+                          - service: homeassistant.toggle
+                            target:
+                              entity_id: !input target_entity
+          - default:
+              - service: homeassistant.toggle
+                target:
+                  entity_id: !input target_entity
+      # --- Detached Mode ---
+      - conditions:
+          - condition: template
+            value_template: "{{ switch_mode == 'detached' }}"
+        sequence:
+          - event: sonoff_switch_event
+            event_data:
+              target_entity: !input target_entity
+              switch_mode: !input switch_mode
+  - service: persistent_notification.create
+    data:
+      message: "Sonoff Mini Smart Switch Blueprint executed."
+      title: "Blueprint Execution"
+mode: single
