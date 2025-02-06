@@ -3,24 +3,44 @@ blueprint:
   description: |
     🔌 **Turn your traditional switch into a smart switch!**
     
-    This blueprint allows a **Sonoff MiniR4M, MiniR4, or ZBMINIR2** switch to control a smart device of your choice:
-    - 💡 **Lamp**
+    This blueprint allows a **Sonoff MiniR4M, MiniR4, or ZBMINIR2** switch to control any device of your choice, whether smart or non-smart:
+    - 💡 **Lamp** (Smart or non-smart, relay detachment recommended for smart lamps)
     - 🌬️ **Fan**
     - ❄️ **Heater**
     - 🌬️ **Humidifier**
-    - ✨ Any other smart device!
+    - ⚡ **Any other electrical device!**
     
-    **Features:**
-    - **Relay Detachment (Optional)** → Use the switch independently or toggle the relay.
-    - **Multi-Click Actions** → Different actions for single, double, and long press.
-    - **Scene Activation** → Trigger Home Assistant scenes (e.g., "Movie Night").
-    - **Auto-Off Timer** → Automatically turn off after a set time.
-    - **Brightness Control** → Hold to adjust light brightness (if dimmable).
-    - **Energy Monitoring** → Get notifications if power usage is too high.
-    - **Safety Lock** → Disable switch input for child-proofing.
+    **Why Detach the Relay?**
+    - If you are controlling a **smart lamp**, enable relay detachment to prevent the switch from cutting power to the lamp, allowing full control via Home Assistant.
+    - If you are controlling a **non-smart lamp or other device**, you can leave the relay enabled so that the switch directly turns it on and off.
+    - Some users may prefer to disable the switch entirely and only use it to power the Sonoff module while controlling the device purely via Home Assistant.
+    
+    **Supported Switch Types & Behavior:**
+    - 🎛 **Rocker Switch**: Flips between two fixed positions. Multi-press actions like double-clicks may not work reliably.
+    - 🔘 **Push Button**: Momentary switch that springs back after being pressed. Fully supports **single, double, and long press** actions.
+    
+    ✨ **Enhanced Features:**
+    - 🎚️ **Easy Mode** → Simplifies settings for basic use (toggle only, hides advanced options).
+    - 🔄 **Relay Detachment (Optional)** → Use the switch independently or toggle the relay.
+    - 🎭 **Multi-Click Actions** → Customize actions for single, double, and long press.
+    - 🎬 **Scene Activation** → Trigger Home Assistant scenes (e.g., "Movie Night").
+    - ⏳ **Auto-Off Timer** → Automatically turn off after a set time.
+    - 💡 **Brightness Control** → Hold to adjust light brightness (if dimmable).
+    - 🌅 **Adaptive Lighting Mode** → Adjust brightness and color temperature based on time of day.
+    - ⚡ **Energy Monitoring** → Get notifications if power usage is too high.
+    - 📊 **Usage Tracking** → Logs switch toggles for analysis in HA dashboards.
+    - 🔔 **Notifications** → Alerts when a device is turned on/off or power exceeds threshold.
+    - 🔄 **Control Multiple Devices** → Toggle multiple devices at once.
+    - 🔒 **Safety Lock** → Disable switch input when the switch is no longer needed (child-proofing or pure HA control).
   
   domain: automation
   input:
+    easy_mode:
+      name: 🎚️ Easy Mode
+      description: "Enable to hide advanced options and use the switch for simple toggling."
+      default: false
+      selector:
+        boolean:
     sonoff_device:
       name: 🛠️ Sonoff Mini Device
       description: "Select the Sonoff MiniR4M, MiniR4, or ZBMINIR2 switch."
@@ -29,7 +49,7 @@ blueprint:
           integration: sonoff
     controlled_device:
       name: 🔧 Device to Control (Optional)
-      description: "Select the device to control (e.g., lamp, fan, heater, humidifier, or any other smart device). Leave empty to use relay."
+      description: "Select the device to control (e.g., lamp, fan, heater, humidifier, or any other device). Leave empty to use relay."
       default: {}
       selector:
         target:
@@ -37,15 +57,21 @@ blueprint:
             domain: [switch, fan, climate]
     smart_light:
       name: 🌟 Smart Lamp (Optional)
-      description: "Select a lamp to control if applicable."
+      description: "Select a lamp to control if applicable. Can be smart or non-smart."
       default: {}
       selector:
         target:
           entity:
             domain: light
+    adaptive_lighting:
+      name: 🌅 Adaptive Lighting Mode
+      description: "Enable automatic brightness and color temperature adjustments based on time of day."
+      default: false
+      selector:
+        boolean:
     switch_type:
       name: 🎛️ Switch Type
-      description: "Specify if your switch is a rocker switch or a push button."
+      description: "Specify if your switch is a rocker switch or a push button. Rockers may not support double and long presses."
       selector:
         select:
           options:
@@ -62,8 +88,8 @@ blueprint:
           max: 3600
           unit_of_measurement: seconds
     enable_safety_lock:
-      name: 🔒 Safety Lock
-      description: "Disable physical switch input (child-proof mode)."
+      name: 🔒 Disable Switch Input
+      description: "Disable the physical switch input. Useful for child-proofing or when the switch is only needed to power the Sonoff module."
       default: false
       selector:
         boolean:
@@ -79,6 +105,12 @@ action:
   - choose:
       - conditions:
           - condition: template
+            value_template: "{{ easy_mode }}"
+        sequence:
+          - service: homeassistant.toggle
+            target: !input controlled_device
+      - conditions:
+          - condition: template
             value_template: "{{ smart_light is not none and smart_light != {} }}"
         sequence:
           - service: light.toggle
@@ -89,6 +121,15 @@ action:
         sequence:
           - service: homeassistant.toggle
             target: !input controlled_device
+  - if:
+      - condition: template
+        value_template: "{{ adaptive_lighting }}"
+    then:
+      - service: light.turn_on
+        target: !input smart_light
+        data:
+          brightness_pct: "{{ (state_attr(smart_light, 'brightness') | float / 255 * 100) | int }}"
+          color_temp: "{{ (state_attr(smart_light, 'color_temp') | float) }}"
   - if:
       - condition: template
         value_template: "{{ enable_safety_lock }}"
