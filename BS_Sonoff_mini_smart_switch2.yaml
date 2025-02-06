@@ -2,8 +2,7 @@ blueprint:
   name: Sonoff Mini Smart Switch Blueprint (Enhanced)
   description: >
     This blueprint provides basic control over Sonoff devices using a simple “dumb” switch.
-    You can select your Sonoff device’s integration (SonoffLAN or ZHA) and model
-    (MiniR4M, MiniR4, ZBMINIR2, or Other). In addition, choose the category of the target
+    You can select your Sonoff device’s model (MiniR4M, MiniR4, ZBMINIR2, or Other). In addition, choose the category of the target
     device (e.g., Light, Fan, or Other) and whether it is smart or non‐smart.
     
     **Operating Modes:**
@@ -15,15 +14,6 @@ blueprint:
     - **auto:** The fan activates when a humidity sensor’s reading exceeds a threshold.
   domain: automation
   input:
-    sonoff_integration:
-      name: Sonoff Integration
-      description: "Select the integration used by your Sonoff device."
-      default: sonofflan
-      selector:
-        select:
-          options:
-            - sonofflan
-            - zha
     sonoff_model:
       name: Sonoff Device Model
       description: "Select your Sonoff device model."
@@ -40,7 +30,9 @@ blueprint:
       description: "Select your Sonoff device that detects the button press."
       selector:
         device:
-          integration: !input sonoff_integration
+          integration:
+            - sonofflan
+            - zha
           manufacturer: ITEAD
     switch_mode:
       name: Operating Mode
@@ -121,11 +113,13 @@ blueprint:
 trigger:
   - platform: device
     device_id: !input sonoff_device
-    domain: !input sonoff_integration
+    domain: sonofflan
     type: button_short_press
-
+  - platform: device
+    device_id: !input sonoff_device
+    domain: zha
+    type: button_short_press
 condition: []
-
 action:
   - choose:
       # --- Toggle Mode ---
@@ -191,7 +185,6 @@ action:
               - service: homeassistant.toggle
                 target:
                   entity_id: !input target_entity
-
       # --- Detached Mode ---
       - conditions:
           - condition: template
@@ -201,10 +194,8 @@ action:
             event_data:
               target_entity: !input target_entity
               switch_mode: !input switch_mode
-
   - service: persistent_notification.create
     data:
       message: "Sonoff Mini Smart Switch Blueprint executed."
       title: "Blueprint Execution"
-
 mode: single
