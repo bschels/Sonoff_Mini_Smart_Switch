@@ -1,0 +1,169 @@
+blueprint:
+  name: "Sonoff Mini Smart Switch"
+  description: |
+    🔌 **Advanced Sonoff Smart Switch Automation!**
+    
+    This blueprint provides flexible control over **Sonoff MiniR4M, MiniR4, ZBMINIR2, and other compatible devices**. It supports various switch behaviors, relay detachment, and smart automation for fans, lights, and other appliances.
+    
+    **How It Works:**
+    - The Sonoff device detects state changes from an attached dumb switch through its **S1/S2 terminals**.
+    - If the device is in **relay mode**, pressing the dumb switch will toggle the relay.
+    - If in **detached mode**, the switch state is sent to Home Assistant without toggling the relay.
+    - Home Assistant then determines the appropriate action based on your selected mode.
+    
+    **Supported Sonoff Devices & Setup:**
+    - 🟢 **Sonoff MiniR4M** → Relay detachment enabled by default.
+    - 🔵 **Sonoff MiniR4** → Relay detachment must be manually enabled in eWeLink.
+    - 🟠 **Sonoff ZBMINIR2** → Zigbee-based with local control.
+    - ⚙️ **Other Sonoff Models** → Default settings applied.
+    
+    **Control Options:**
+    - 💡 **Smart or Dumb Lamp** (Toggle power or use detached mode)
+    - 🌬 **Bathroom Fan** (Humidity-based and manual control)
+    - ⚙️ **Any Smart or Non-Smart Device** (Multiple device control)
+    
+    **Bathroom Fan Automation:**
+    - 🖲 **Manual Mode** → Turns on when switch is pressed.
+    - 🌫 **Auto Mode** → Activates when humidity exceeds a set threshold.
+    - 🚿 **Shower Detection** → Detects rapid humidity increase.
+    - 🔄 **Hybrid Mode** → Both manual and automatic activation.
+    - ⏳ **Adaptive Runtime** → Runs based on humidity duration.
+    
+    **Switch Configurations:**
+    - 🎚 **Rocker Switch** → Classic toggle behavior.
+    - 🔘 **Push Button** → Supports single, double, and long press actions.
+    
+    **Additional Features:**
+    - 🔄 **Relay Detachment (Optional)**
+    - 🎬 **Scene Activation Support**
+    - 🔄 **Multiple Device Control**
+    - 🕒 **Time-Based Scheduling**
+    - 📊 **Adaptive Fan Runtime Based on Humidity**
+    - ⏱ **Frequent Humidity Polling (Every 30 Seconds)**
+    - 🔍 **Improved Sonoff Switch Filtering**
+    - 🔎 **Dynamic Filtering for Devices to Control**
+
+  domain: automation
+  input:
+    sonoff_switch:
+      name: "Sonoff Switch"
+      description: "Select the Sonoff switch entity (detects dumb switch presses)."
+      selector:
+        entity:
+          domain: binary_sensor
+          integration: sonoff
+          device_class: power
+
+    control_type:
+      name: "Control Type"
+      description: "Select what you want to control (lamp, fan, or other devices)."
+      selector:
+        select:
+          options:
+            - "Lamp"
+            - "Fan"
+            - "Other"
+
+    device_to_control:
+      name: "Device to Control"
+      description: "Choose the device(s) to control."
+      selector:
+        entity:
+          domain: 
+            - light
+            - fan
+            - switch
+          multiple: true
+
+    mode:
+      name: "Control Mode"
+      description: "Select how the switch should behave."
+      selector:
+        select:
+          options:
+            - "Relay Toggle"
+            - "Detached Mode"
+            - "Smart Scene"
+
+    fan_humidity_sensor:
+      name: "Humidity Sensor (Optional)"
+      description: "Select a humidity sensor for automated fan control."
+      default: ''
+      selector:
+        entity:
+          domain: sensor
+          device_class: humidity
+          multiple: false
+
+    humidity_threshold:
+      name: "Humidity Threshold (%)"
+      description: "Trigger fan activation when humidity exceeds this value."
+      default: 70
+      selector:
+        number:
+          min: 50
+          max: 90
+          unit_of_measurement: "%"
+
+    fan_runtime:
+      name: "Fan Runtime (minutes)"
+      description: "How long the fan runs after activation."
+      default: 10
+      selector:
+        number:
+          min: 1
+          max: 60
+          unit_of_measurement: "minutes"
+
+mode: restart
+max_exceeded: silent
+
+trigger:
+  - platform: state
+    entity_id: !input sonoff_switch
+    to: "on"
+  - platform: numeric_state
+    entity_id: !input fan_humidity_sensor
+    above: !input humidity_threshold
+  - platform: time_pattern
+    seconds: "/30"
+
+action:
+  - choose:
+      - conditions:
+          - condition: template
+            value_template: "{{ mode == 'Relay Toggle' }}"
+        sequence:
+          - service: switch.toggle
+            target:
+              entity_id: !input device_to_control
+
+      - conditions:
+          - condition: template
+            value_template: "{{ mode == 'Detached Mode' }}"
+        sequence:
+          - service: homeassistant.toggle
+            target:
+              entity_id: !input device_to_control
+
+      - conditions:
+          - condition: template
+            value_template: "{{ mode == 'Smart Scene' }}"
+        sequence:
+          - service: scene.turn_on
+            target:
+              entity_id: !input device_to_control
+
+  - choose:
+      - conditions:
+          - condition: template
+            value_template: "{{ fan_humidity_sensor is not none and mode == 'Relay Toggle' }}"
+        sequence:
+          - service: switch.turn_on
+            target:
+              entity_id: !input device_to_control
+          - delay:
+              minutes: !input fan_runtime
+          - service: switch.turn_off
+            target:
+              entity_id: !input device_to_control
