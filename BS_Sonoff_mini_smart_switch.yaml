@@ -40,9 +40,7 @@ blueprint:
       description: "Select your Sonoff device that detects the button press."
       selector:
         device:
-          integration:
-            - sonofflan
-            - zha
+          integration: !input sonoff_integration
           manufacturer: ITEAD
     switch_mode:
       name: Operating Mode
@@ -79,10 +77,10 @@ blueprint:
       description: >
         (Optional) For non-smart devices, specify a scene to trigger.
         Leave blank to use a simple toggle.
-      required: false
       selector:
         entity:
           domain: scene
+      default: ""
     fan_control_mode:
       name: Fan Control Mode
       description: >
@@ -116,20 +114,14 @@ blueprint:
     sensor_entity:
       name: Humidity Sensor
       description: "(Optional) The humidity sensor entity for auto fan control."
-      required: false
       selector:
         entity:
           domain: sensor
-
+      default: ""
 trigger:
-  # Two triggers allow using either SonoffLAN or ZHA devices.
   - platform: device
     device_id: !input sonoff_device
-    domain: sonofflan
-    type: button_short_press
-  - platform: device
-    device_id: !input sonoff_device
-    domain: zha
+    domain: !input sonoff_integration
     type: button_short_press
 
 condition: []
@@ -145,14 +137,12 @@ action:
               # Smart Fan – Manual Mode
               - conditions:
                   - condition: template
-                    value_template: "{{ target_device_category == 'Fan (Smart)' }}"
-                  - condition: template
-                    value_template: "{{ fan_control_mode == 'manual' }}"
+                    value_template: "{{ target_device_category == 'Fan (Smart)' and fan_control_mode == 'manual' }}"
                 sequence:
                   - service: fan.turn_on
                     target:
                       entity_id: !input target_entity
-                  - delay:
+                  - delay: 
                       seconds: !input fan_duration
                   - service: fan.turn_off
                     target:
@@ -160,13 +150,11 @@ action:
               # Smart Fan – Auto Mode (activate only if sensor reading exceeds threshold)
               - conditions:
                   - condition: template
-                    value_template: "{{ target_device_category == 'Fan (Smart)' }}"
-                  - condition: template
-                    value_template: "{{ fan_control_mode == 'auto' }}"
+                    value_template: "{{ target_device_category == 'Fan (Smart)' and fan_control_mode == 'auto' }}"
                 sequence:
                   - condition: template
                     value_template: >
-                      {% if sensor_entity %}
+                      {% if sensor_entity != "" %}
                         {{ states(sensor_entity) | float > humidity_threshold }}
                       {% else %}
                         false
@@ -185,13 +173,12 @@ action:
               # Non-Smart Devices (Light or Fan Non-Smart) and Other
               - conditions:
                   - condition: template
-                    value_template: >
-                      {{ target_device_category in ['Light (Non-Smart)', 'Fan (Non-Smart)', 'Other'] }}
+                    value_template: "{{ target_device_category in ['Light (Non-Smart)', 'Fan (Non-Smart)', 'Other'] }}"
                 sequence:
                   - choose:
                       - conditions:
                           - condition: template
-                            value_template: "{{ non_smart_scene not in [None, ''] }}"
+                            value_template: "{{ non_smart_scene != '' }}"
                         sequence:
                           - service: scene.turn_on
                             target:
@@ -200,7 +187,6 @@ action:
                           - service: homeassistant.toggle
                             target:
                               entity_id: !input target_entity
-          # Fallback if no inner conditions match.
           - default:
               - service: homeassistant.toggle
                 target:
@@ -216,7 +202,6 @@ action:
               target_entity: !input target_entity
               switch_mode: !input switch_mode
 
-  # Optional notification confirming blueprint execution.
   - service: persistent_notification.create
     data:
       message: "Sonoff Mini Smart Switch Blueprint executed."
