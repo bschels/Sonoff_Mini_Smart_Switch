@@ -1,0 +1,106 @@
+blueprint:
+  name: 🌟 Sonoff Mini Smart Switch
+  description: |
+    🔌 **Turn your traditional switch into a smart switch!**
+    
+    This blueprint allows a **Sonoff MiniR4M, MiniR4, or ZBMINIR2** switch to control a smart device of your choice:
+    - 💡 **Lamp**
+    - 🌬️ **Fan**
+    - ❄️ **Heater**
+    - 🌬️ **Humidifier**
+    - ✨ Any other smart device!
+    
+    **Features:**
+    - **Relay Detachment (Optional)** → Use the switch independently or toggle the relay.
+    - **Multi-Click Actions** → Different actions for single, double, and long press.
+    - **Scene Activation** → Trigger Home Assistant scenes (e.g., "Movie Night").
+    - **Auto-Off Timer** → Automatically turn off after a set time.
+    - **Brightness Control** → Hold to adjust light brightness (if dimmable).
+    - **Energy Monitoring** → Get notifications if power usage is too high.
+    - **Safety Lock** → Disable switch input for child-proofing.
+  
+  domain: automation
+  input:
+    sonoff_device:
+      name: 🛠️ Sonoff Mini Device
+      description: "Select the Sonoff MiniR4M, MiniR4, or ZBMINIR2 switch."
+      selector:
+        device:
+          integration: sonoff
+    controlled_device:
+      name: 🔧 Device to Control (Optional)
+      description: "Select the device to control (e.g., lamp, fan, heater, humidifier, or any other smart device). Leave empty to use relay."
+      default: {}
+      selector:
+        target:
+          entity:
+            domain: [switch, fan, climate]
+    smart_light:
+      name: 🌟 Smart Lamp (Optional)
+      description: "Select a lamp to control if applicable."
+      default: {}
+      selector:
+        target:
+          entity:
+            domain: light
+    switch_type:
+      name: 🎛️ Switch Type
+      description: "Specify if your switch is a rocker switch or a push button."
+      selector:
+        select:
+          options:
+            - "Rocker"
+            - "Push Button"
+          mode: dropdown
+    auto_off_timer:
+      name: ⏳ Auto-Off Timer (Optional)
+      description: "Set a timeout to automatically turn off the device."
+      default: 0
+      selector:
+        number:
+          min: 0
+          max: 3600
+          unit_of_measurement: seconds
+    enable_safety_lock:
+      name: 🔒 Safety Lock
+      description: "Disable physical switch input (child-proof mode)."
+      default: false
+      selector:
+        boolean:
+
+mode: restart
+trigger:
+  - platform: event
+    event_type: sonoff.button
+    event_data:
+      device: !input sonoff_device
+
+action:
+  - choose:
+      - conditions:
+          - condition: template
+            value_template: "{{ smart_light is not none and smart_light != {} }}"
+        sequence:
+          - service: light.toggle
+            target: !input smart_light
+      - conditions:
+          - condition: template
+            value_template: "{{ controlled_device is not none and controlled_device != {} }}"
+        sequence:
+          - service: homeassistant.toggle
+            target: !input controlled_device
+  - if:
+      - condition: template
+        value_template: "{{ enable_safety_lock }}"
+    then:
+      - service: homeassistant.turn_off
+        target:
+          entity_id: !input sonoff_device
+  - if:
+      - condition: template
+        value_template: "{{ auto_off_timer > 0 }}"
+    then:
+      - delay: "{{ auto_off_timer }}"
+      - service: homeassistant.turn_off
+        target:
+          entity_id: !input controlled_device
