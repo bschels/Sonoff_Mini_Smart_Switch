@@ -1,0 +1,199 @@
+blueprint:
+  name: ⚡ Sonoff Smart Switch - MINIR4M, MINIR4, ZBMINIR2, TX, BASICR3, S26
+  description: |
+    🔌 **Turn your traditional switch into a smart switch!**
+    
+    This blueprint allows a **Sonoff MiniR4M, MiniR4, ZBMINIR2, TX, BASICR3, S26 and other Sonoff devices** to control various types of devices with intelligent automation:
+    - 💡 **Smart Lamp** (Relay detachment recommended)
+    - 💡 **Dumb Lamp** (Relay toggles power)
+    - 🌬 **Bathroom Fan** (Manual & humidity-based automation)
+    - 🔥 **Heater**
+    - 💨 **Humidifier**
+    - ⚙️ **Other Smart or Non-Smart Devices**
+    
+    **Supported Sonoff Devices & Setup Requirements:**
+    - 🟢 **Sonoff MiniR4M** → Relay detachment **enabled by default**. 
+      - ⚠️ **Setup:** If controlling a **smart lamp**, go to **Relay Settings** in the eWeLink app and enable **Detach Relay Mode**.
+    - 🔵 **Sonoff MiniR4** → Similar to MiniR4M, supports switch automation.
+      - ⚠️ **Setup:** Enable **Detach Relay Mode** if using with a smart lamp.
+    - 🟠 **Sonoff ZBMINIR2** → Zigbee model with local control.
+      - ⚠️ **Setup:** No relay detachment needed, but ensure it's paired with Home Assistant via Zigbee.
+    - 🔴 **Sonoff TX Series** → Wall touch switch with multiple buttons.
+      - ⚠️ **Setup:** Use **Scene Mode** in eWeLink for multiple touch actions.
+    - ⚪ **Sonoff BasicR3** → Simple Wi-Fi relay switch for general automation.
+      - ⚠️ **Setup:** Default relay mode, no detachment needed.
+    - ⚫ **Sonoff S26** → Smart plug with remote control.
+      - ⚠️ **Setup:** No relay detachment required, just connect via LAN mode.
+    - ⚙️ **Other Sonoff Models** → Default settings will be applied.
+    
+    **Device Selection**
+    - 🏠 **Choose what you are controlling:** Select a mode (Smart Lamp, Dumb Lamp, Bathroom Fan, Generic Smart Device, Generic Non-Smart Device), and only relevant options will appear.
+    
+    **Bathroom Fan Mode:**
+    - 🖲 **Manual Mode** → Press the switch to run the fan for a set time (odor control).
+    - 🌫 **Automatic Mode** → The fan turns on when humidity exceeds a threshold.
+    - 🚿 **Shower Detection** → Detects rapid humidity increases and starts the fan.
+    - 🔄 **Hybrid Mode** → The fan runs manually when pressed and also activates via humidity detection.
+    - ⏳ **Custom Fan Runtime** → Set a timer for how long the fan runs after activation.
+    - 📉 **Auto Off by Humidity** → Optionally turn off the fan when humidity drops below a defined threshold.
+    
+    **Supported Switch Types & Behavior:**
+    - 🎚 **Rocker Switch**: Stays in either "on" or "off" position. Best for simple toggling but doesn't support double or long press.
+    - 🔘 **Push Button**: A momentary switch that springs back. Fully supports **single, double, and long press** actions.
+    
+    **Enhanced Features:**
+    - 🔄 **Relay Detachment (Optional)** → Use the switch independently or toggle the relay.
+    - 🎭 **Multi-Click Actions** → Customize actions for single, double, and long press.
+    - 🎬 **Scene Activation** → Trigger Home Assistant scenes (e.g., "Movie Night").
+    - 🌞 **Adaptive Lighting** → Auto-adjust brightness & color temperature by time of day.
+    - ⚡ **Energy Monitoring** → Get notifications if power usage is too high.
+    - 📊 **Usage Tracking** → Logs switch toggles for analysis in HA dashboards.
+    - 🔔 **Notifications** → Alerts when a device is turned on/off or power exceeds threshold.
+    - 🔄 **Control Multiple Devices** → Toggle multiple devices at once.
+    - 🔒 **Safety Lock** → Disable switch input when the switch is no longer needed.
+  
+  domain: automation
+  input:
+    sonoff_model:
+      name: 🏷 Sonoff Model
+      description: "Select your Sonoff device. This will adjust settings automatically and provide setup instructions."
+      selector:
+        select:
+          options:
+            - "Sonoff MiniR4M"
+            - "Sonoff MiniR4"
+            - "Sonoff ZBMINIR2"
+            - "Sonoff BasicR3"
+            - "Sonoff TX Series"
+            - "Sonoff S26"
+            - "Other"
+          mode: dropdown
+      default: "Sonoff MiniR4M"
+    enable_safety_lock:
+      name: 🔒 Disable Switch Input
+      description: "Disable the physical switch input when it is no longer needed."
+      default: false
+      selector:
+        boolean:
+    auto_off_timer:
+      name: ⏳ Auto-Off Timer (Optional)
+      description: "Set a timeout to automatically turn off the controlled device."
+      default: 0
+      selector:
+        number:
+          min: 0
+          max: 3600
+          unit_of_measurement: seconds
+    switch_type:
+      name: 🎚 Switch Type
+      description: "Select your switch type: Rocker (fixed on/off position) or Push Button (momentary press, supports multi-click actions)."
+      selector:
+        select:
+          options:
+            - "Rocker"
+            - "Push Button"
+          mode: dropdown
+    controlled_device:
+      name: 🎛 Device to Control (Optional)
+      description: "Select the device to control."
+      default: {}
+      selector:
+        target:
+          entity:
+            domain: [switch, fan, climate, light]
+    enable_adaptive_lighting:
+      name: 🌞 Adaptive Lighting Mode
+      description: "Enable automatic brightness and color temperature adjustments based on time of day."
+      default: false
+      selector:
+        boolean:
+    adaptive_lighting_mode:
+      name: 🌅 Adaptive Lighting Mode
+      description: "Choose between Auto mode (recommended brightness and color temperature by time of day) or Advanced mode (custom settings)."
+      selector:
+        select:
+          options:
+            - "Off"
+            - "Auto Mode"
+            - "Advanced Mode"
+          mode: dropdown
+      default: "Off"
+    brightness_morning:
+      name: ☀️ Morning Brightness
+      description: "Set brightness for morning hours (6AM - 12PM)."
+      default: 80
+      selector:
+        number:
+          min: 1
+          max: 100
+          unit_of_measurement: "%"
+    brightness_evening:
+      name: 🌙 Evening Brightness
+      description: "Set brightness for evening hours (6PM - 12AM)."
+      default: 60
+      selector:
+        number:
+          min: 1
+          max: 100
+          unit_of_measurement: "%"
+    color_temp_morning:
+      name: ☀️ Morning Color Temperature
+      description: "Set color temperature for morning hours."
+      default: 4000
+      selector:
+        number:
+          min: 2000
+          max: 6500
+          unit_of_measurement: "K"
+    color_temp_evening:
+      name: 🌙 Evening Color Temperature
+      description: "Set color temperature for evening hours."
+      default: 2700
+      selector:
+        number:
+          min: 2000
+          max: 6500
+          unit_of_measurement: "K"
+              humidity_sensor:
+      name: 🌫 Humidity Sensor
+      description: "Select a humidity sensor to automate the bathroom fan."
+      default: {}
+      selector:
+        entity:
+          domain: sensor
+    humidity_threshold:
+      name: 📈 Humidity Threshold
+      description: "Set the humidity level at which the fan should turn on automatically."
+      default: 70
+      selector:
+        number:
+          min: 40
+          max: 100
+          unit_of_measurement: "%"
+    humidity_off_threshold:
+      name: 📉 Auto Off Humidity Threshold
+      description: "Set the humidity level at which the fan should turn off automatically (optional)."
+      default: 50
+      selector:
+        number:
+          min: 30
+          max: 70
+          unit_of_measurement: "%"
+    fan_runtime:
+      name: ⏳ Fan Runtime
+      description: "Set how long the fan should run after activation."
+      default: 15
+      selector:
+        number:
+          min: 1
+          max: 60
+          unit_of_measurement: minutes
+    shower_detection:
+      name: 🚿 Shower Detection
+      description: "Enable automatic fan activation when a rapid humidity increase is detected."
+      default: false
+      selector:
+        boolean:
+
+mode: restart
+max_exceeded: silent
