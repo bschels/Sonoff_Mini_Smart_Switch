@@ -9,8 +9,7 @@ blueprint:
     - **auto:** Activate the fan only if a humidity sensor’s reading exceeds a threshold.
     - **both:** Turn the fan on immediately, then after the manual duration,
       turn it off only if humidity is below the threshold. This allows you to
-      use manual activation (for instance, when you need extra ventilation) while still
-      benefiting from auto control during a shower.
+      use manual activation (for extra ventilation) while still benefiting from auto control.
     
     For smart lights and IKEA bulbs, the blueprint toggles the light.
     For non‑smart devices, it will trigger a scene (if provided) or toggle the entity.
@@ -32,18 +31,15 @@ blueprint:
       name: Action Sensor
       description: >
         Select the sensor entity that reports the button action.
-        It is recommended to choose a sensor whose entity_id includes “_action”.
+        (It is recommended that its entity_id includes "_action".)
       selector:
         entity:
           domain: sensor
-          filter:
-            include:
-              - entity_id: "sensor.*_action"
     switch_mode:
       name: Operating Mode
       description: >
         Choose how to control the target entity:
-        - **toggle:** Directly call the relevant service (for example, toggling a light or running a fan sequence).
+        - **toggle:** Directly call the relevant service (e.g. toggling a light or running a fan sequence).
         - **detached:** Fire an event for custom automations.
       default: toggle
       selector:
@@ -66,9 +62,6 @@ blueprint:
       selector:
         entity:
           domain: light
-          filter:
-            include:
-              - entity_id: "light.ikea_*"
       default: ""
     target_device_category:
       name: Target Device Category
@@ -124,10 +117,7 @@ blueprint:
       selector:
         entity:
           domain: sensor
-          filter:
-            include:
-              - attribute: device_class
-                value: humidity
+          device_class: humidity
       default: ""
     # --- Non-Smart Device Options ---
     non_smart_scene:
@@ -146,19 +136,16 @@ trigger:
 condition: []
 action:
   - choose:
-      # --- Toggle Mode ---
       - conditions:
           - condition: template
             value_template: "{{ switch_mode == 'toggle' }}"
         sequence:
           - choose:
-              # --- Fan (Smart) Control ---
               - conditions:
                   - condition: template
                     value_template: "{{ target_device_category == 'Fan (Smart)' }}"
                 sequence:
                   - choose:
-                      # Fan Control: manual
                       - conditions:
                           - condition: template
                             value_template: "{{ fan_control_mode == 'manual' }}"
@@ -171,7 +158,6 @@ action:
                           - service: fan.turn_off
                             target:
                               entity_id: !input target_entity
-                      # Fan Control: auto
                       - conditions:
                           - condition: template
                             value_template: "{{ fan_control_mode == 'auto' }}"
@@ -186,7 +172,6 @@ action:
                           - service: fan.turn_on
                             target:
                               entity_id: !input target_entity
-                      # Fan Control: both (manual + auto)
                       - conditions:
                           - condition: template
                             value_template: "{{ fan_control_mode == 'both' }}"
@@ -210,8 +195,7 @@ action:
                                     target:
                                       entity_id: !input target_entity
                               - default: []
-                  # --- End Fan (Smart) ---
-              # --- Smart Light Control ---
+                  - default: []
               - conditions:
                   - condition: template
                     value_template: "{{ target_device_category == 'Light (Smart)' }}"
@@ -219,7 +203,6 @@ action:
                   - service: light.toggle
                     target:
                       entity_id: !input target_entity
-              # --- IKEA Bulb Control ---
               - conditions:
                   - condition: template
                     value_template: "{{ target_device_category == 'IKEA Bulb (Smart)' }}"
@@ -232,7 +215,6 @@ action:
                         {% else %}
                           {{ ikea_bulb }}
                         {% endif %}
-              # --- Non-Smart Devices and Other ---
               - conditions:
                   - condition: template
                     value_template: "{{ target_device_category in ['Light (Non-Smart)', 'Fan (Non-Smart)', 'Other'] }}"
@@ -253,7 +235,6 @@ action:
               - service: homeassistant.toggle
                 target:
                   entity_id: !input target_entity
-      # --- Detached Mode ---
       - conditions:
           - condition: template
             value_template: "{{ switch_mode == 'detached' }}"
