@@ -107,7 +107,7 @@ blueprint:
       default: false
       selector:
         boolean:
-            adaptive_lighting_mode:
+    adaptive_lighting_mode:
       name: 🌅 Adaptive Lighting Mode
       description: "Choose between Auto mode (recommended brightness and color temperature by time of day) or Advanced mode (custom settings)."
       selector:
@@ -118,11 +118,11 @@ blueprint:
             - "Advanced Mode"
           mode: dropdown
       default: "Off"
-    brightness_morning:
-      name: ☀️ Morning Brightness
-      description: "Set brightness for morning hours (6AM - 12PM)."
-      default: 80
-      selector:
+      brightness_morning:
+       name: ☀️ Morning Brightness
+       description: "Set brightness for morning hours (6AM - 12PM)."
+       default: 80
+       selector:
         number:
           min: 1
           max: 100
