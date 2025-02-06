@@ -1,145 +1,225 @@
 blueprint:
-  name: "Sonoff Mini Smart Switch"
-  description: |
-    🔌 **Sonoff Mini Smart Switch Blueprint**
+  name: Sonoff Mini Smart Switch Blueprint (Enhanced)
+  description: >
+    This blueprint provides basic control over Sonoff devices using a simple “dumb” switch.
+    You can select your Sonoff device’s integration (SonoffLAN or ZHA) and model
+    (MiniR4M, MiniR4, ZBMINIR2, or Other). In addition, choose the category of the target
+    device (e.g., Light, Fan, or Other) and whether it is smart or non‐smart.
     
-    This blueprint provides flexible control over **Sonoff MiniR4M, MiniR4, ZBMINIR2, and other compatible devices**. It allows you to use a dumb switch connected to a Sonoff device to control various devices, including lights, fans, and other smart appliances.
+    **Operating Modes:**
+    - **toggle:** Directly toggles the target entity.
+    - **detached:** Sends an event to Home Assistant for further custom automations.
     
-    **Supported Home Assistant Integrations:**
-    - 🏠 **ZHA (Zigbee Home Automation)** → For Zigbee-based Sonoff devices like the ZBMINIR2.
-    - 🌐 **SonoffLAN** → For WiFi-based Sonoff devices, ensuring local control.
-    
-    **Setup Instructions for eWeLink Users:**
-    - If using **SonoffLAN**, enable **LAN mode** in the **eWeLink app**.
-    - Enable **relay detachment** in eWeLink under **Device Settings → Detach Relay** (if supported by your device).
-    - Ensure the device is correctly added to Home Assistant under **SonoffLAN or ZHA**.
-    
-    **How It Works:**
-    - The Sonoff device detects switch presses via its **S1/S2 terminals**.
-    - If using **SonoffLAN**, switch presses are tracked using **event triggers (`sonoff.button`)**.
-    - If using **ZHA**, switch presses are tracked as **state changes in a `binary_sensor` entity**.
-    - If the device is in **relay mode**, pressing the switch toggles the relay.
-    - If in **detached mode**, the switch sends a signal without toggling the relay.
-    
-    **Supported Sonoff Devices:**
-    - 🟢 **Sonoff MiniR4M** → Relay detachment enabled by default.
-    - 🔵 **Sonoff MiniR4** → Requires manual relay detachment in eWeLink.
-    - 🟠 **Sonoff ZBMINIR2** → Zigbee-based, supports local control via ZHA.
-    - ⚙️ **Other Sonoff Models** → Default relay behavior.
-    
-    **Control Options:**
-    - 💡 **Smart or Dumb Lamp** → Toggle power or activate a scene.
-    - 🌬 **Bathroom Fan** → Supports humidity-based automation and manual control.
-    - ⚙️ **Any Other Device** → Toggle smart/non-smart appliances.
-    
-    **Bathroom Fan Automation:**
-    - 🖲 **Manual Mode** → Pressing the switch runs the fan for a set time.
-    - 🌫 **Auto Mode** → Fan activates when humidity exceeds a threshold.
-    - 🚿 **Shower Detection** → Detects humidity spikes and turns on the fan.
-    - 🔄 **Hybrid Mode** → Manual control + automatic humidity activation.
-    - ⏳ **Runtime Control** → Fan turns off automatically based on timer.
-    
-    **Switch Configurations:**
-    - 🎚 **Rocker Switch** → Stays in on/off position, toggles device state.
-    - 🔘 **Push Button** → Supports single, double, and long press actions:
-      - **Single Press** → Toggles the assigned device.
-      - **Double Press** → Activates a scene (if configured).
-      - **Long Press (Contextual Action)**:
-        - **Lamp:** Toggles the light or activates a scene.
-        - **Fan:** Runs the fan for a preset time.
-        - **Other:** Toggles an additional device or predefined action.
-    
-    **Control Modes:**
-    - 🔄 **Relay Toggle** → The relay turns on/off when the switch is pressed.
-    - 🔌 **Detached Mode** → The switch functions independently and does not toggle the relay.
-    - 🎬 **Smart Scene** → Activates a pre-configured Home Assistant scene.
-    
-    **Additional Features:**
-    - 🔄 **Relay Detachment Support**
-    - 🎬 **Scene Activation**
-    - 🔄 **Multi-Device Control**
-    - 🕒 **Time-Based Scheduling**
-    - 📊 **Humidity-Triggered Fan Control**
-    - ⏱ **Frequent Humidity Polling (Every 30 Seconds)**
-    - 🔎 **Filtered Device Selection Based on Control Type**
-    - ⏳ **Custom Fan Runtime for Manual Activation**
-
+    For fans, you can choose between:
+    - **manual:** The fan runs for a preset duration.
+    - **auto:** The fan activates when a humidity sensor’s reading exceeds a threshold.
   domain: automation
   input:
-    control_type:
-      name: "Control Type"
-      description: "Select what kind of device you want to control."
+    sonoff_integration:
+      name: Sonoff Integration
+      description: "Select the integration used by your Sonoff device."
+      default: sonofflan
       selector:
         select:
           options:
-            - "Lamp"
-            - "Fan"
+            - sonofflan
+            - zha
+    sonoff_model:
+      name: Sonoff Device Model
+      description: "Select your Sonoff device model."
+      default: MiniR4M
+      selector:
+        select:
+          options:
+            - MiniR4M
+            - MiniR4
+            - ZBMINIR2
+            - Other
+    sonoff_device:
+      name: Sonoff Device
+      description: "Select your Sonoff device that detects the button press."
+      selector:
+        device:
+          integration:
+            - sonofflan
+            - zha
+          manufacturer: ITEAD
+    switch_mode:
+      name: Operating Mode
+      description: >
+        Choose the operating mode:
+        - **toggle:** Directly toggle the target entity.
+        - **detached:** Send an event to Home Assistant for custom automations.
+      default: toggle
+      selector:
+        select:
+          options:
+            - toggle
+            - detached
+    target_entity:
+      name: Target Entity
+      description: "Select the entity you want to control (e.g., light, fan, switch, etc.)."
+      selector:
+        entity: {}
+    target_device_category:
+      name: Target Device Category
+      description: >
+        Select the category of the target device. This determines which service is used to control it.
+      default: "Light (Smart)"
+      selector:
+        select:
+          options:
+            - "Light (Smart)"
+            - "Light (Non-Smart)"
+            - "Fan (Smart)"
+            - "Fan (Non-Smart)"
             - "Other"
-
-    sonoff_switch:
-      name: "Sonoff Switch"
-      description: "Select the Sonoff switch entity that detects dumb switch presses."
+    non_smart_scene:
+      name: Non-Smart Device Scene
+      description: >
+        (Optional) For non-smart devices, specify a scene to trigger.
+        Leave blank to use a simple toggle.
+      required: false
       selector:
         entity:
-          domain: binary_sensor
-          integration: sonoff
-
-    device_to_control:
-      name: "Device to Control"
-      description: "Choose the device(s) to control."
+          domain: scene
+    fan_control_mode:
+      name: Fan Control Mode
+      description: >
+        If controlling a smart fan, choose:
+        - **manual:** Run the fan for a preset duration.
+        - **auto:** Activate the fan based on a humidity sensor reading.
+      default: manual
       selector:
-        entity:
-          domain: 
-            - light
-            - fan
-            - switch
-          multiple: true
-
-    fan_runtime:
-      name: "Manual Fan Runtime (minutes)"
-      description: "How long the fan runs when manually activated."
-      default: 5
+        select:
+          options:
+            - manual
+            - auto
+    fan_duration:
+      name: Fan Run Duration
+      description: "Time in seconds to run the fan in manual mode."
+      default: 60
       selector:
         number:
           min: 1
-          max: 60
-          unit_of_measurement: "minutes"
+          max: 3600
+          unit_of_measurement: seconds
+    humidity_threshold:
+      name: Humidity Threshold
+      description: "In auto mode, the fan will activate if humidity exceeds this value."
+      default: 60
+      selector:
+        number:
+          min: 0
+          max: 100
+          unit_of_measurement: '%'
+    sensor_entity:
+      name: Humidity Sensor
+      description: "(Optional) The humidity sensor entity for auto fan control."
+      required: false
+      selector:
+        entity:
+          domain: sensor
 
 trigger:
-  - platform: event
-    event_type: sonoff.button
-    event_data:
-      entity_id: !input sonoff_switch
-      click_type: single
-  - platform: event
-    event_type: sonoff.button
-    event_data:
-      entity_id: !input sonoff_switch
-      click_type: double
-  - platform: event
-    event_type: sonoff.button
-    event_data:
-      entity_id: !input sonoff_switch
-      click_type: long
+  # Two triggers allow using either SonoffLAN or ZHA devices.
+  - platform: device
+    device_id: !input sonoff_device
+    domain: sonofflan
+    type: button_short_press
+  - platform: device
+    device_id: !input sonoff_device
+    domain: zha
+    type: button_short_press
+
+condition: []
 
 action:
   - choose:
+      # --- Toggle Mode ---
       - conditions:
           - condition: template
-            value_template: "{{ control_type == 'Fan' }}"
+            value_template: "{{ switch_mode == 'toggle' }}"
         sequence:
-          - service: switch.turn_on
-            target:
-              entity_id: !input device_to_control
-          - delay:
-              minutes: !input fan_runtime
-          - service: switch.turn_off
-            target:
-              entity_id: !input device_to_control
+          - choose:
+              # Smart Fan – Manual Mode
+              - conditions:
+                  - condition: template
+                    value_template: "{{ target_device_category == 'Fan (Smart)' }}"
+                  - condition: template
+                    value_template: "{{ fan_control_mode == 'manual' }}"
+                sequence:
+                  - service: fan.turn_on
+                    target:
+                      entity_id: !input target_entity
+                  - delay:
+                      seconds: !input fan_duration
+                  - service: fan.turn_off
+                    target:
+                      entity_id: !input target_entity
+              # Smart Fan – Auto Mode (activate only if sensor reading exceeds threshold)
+              - conditions:
+                  - condition: template
+                    value_template: "{{ target_device_category == 'Fan (Smart)' }}"
+                  - condition: template
+                    value_template: "{{ fan_control_mode == 'auto' }}"
+                sequence:
+                  - condition: template
+                    value_template: >
+                      {% if sensor_entity %}
+                        {{ states(sensor_entity) | float > humidity_threshold }}
+                      {% else %}
+                        false
+                      {% endif %}
+                  - service: fan.turn_on
+                    target:
+                      entity_id: !input target_entity
+              # Smart Light Control
+              - conditions:
+                  - condition: template
+                    value_template: "{{ target_device_category == 'Light (Smart)' }}"
+                sequence:
+                  - service: light.toggle
+                    target:
+                      entity_id: !input target_entity
+              # Non-Smart Devices (Light or Fan Non-Smart) and Other
+              - conditions:
+                  - condition: template
+                    value_template: >
+                      {{ target_device_category in ['Light (Non-Smart)', 'Fan (Non-Smart)', 'Other'] }}
+                sequence:
+                  - choose:
+                      - conditions:
+                          - condition: template
+                            value_template: "{{ non_smart_scene not in [None, ''] }}"
+                        sequence:
+                          - service: scene.turn_on
+                            target:
+                              entity_id: !input non_smart_scene
+                      - default:
+                          - service: homeassistant.toggle
+                            target:
+                              entity_id: !input target_entity
+          # Fallback if no inner conditions match.
+          - default:
+              - service: homeassistant.toggle
+                target:
+                  entity_id: !input target_entity
+
+      # --- Detached Mode ---
       - conditions:
           - condition: template
-            value_template: "{{ control_type == 'Lamp' }}"
+            value_template: "{{ switch_mode == 'detached' }}"
         sequence:
-          - service: light.toggle
-            target:
-              entity_id: !input device_to_control
+          - event: sonoff_switch_event
+            event_data:
+              target_entity: !input target_entity
+              switch_mode: !input switch_mode
+
+  # Optional notification confirming blueprint execution.
+  - service: persistent_notification.create
+    data:
+      message: "Sonoff Mini Smart Switch Blueprint executed."
+      title: "Blueprint Execution"
+
+mode: single
