@@ -1,9 +1,9 @@
-blueprint:
-  name: ⚡ Sonoff Smart Switch - MINIR4M, MINIR4, ZBMINIR2, TX, BASICR3, S26
+lueprint:
+  name: ⚡ Sonoff Smart Switch - MiniR4M, MiniR4, ZBMINIR2 & More
   description: |
     🔌 **Turn your traditional switch into a smart switch!**
     
-    This blueprint allows a **Sonoff MiniR4M, MiniR4, ZBMINIR2, TX, BASICR3, S26 and other Sonoff devices** to control various types of devices with intelligent automation:
+    This blueprint allows a **Sonoff MiniR4M, MiniR4, ZBMINIR2, and other Sonoff devices** to control various types of devices with intelligent automation:
     - 💡 **Smart Lamp** (Relay detachment recommended)
     - 💡 **Dumb Lamp** (Relay toggles power)
     - 🌬 **Bathroom Fan** (Manual & humidity-based automation)
@@ -107,7 +107,7 @@ blueprint:
       default: false
       selector:
         boolean:
-    adaptive_lighting_mode:
+            adaptive_lighting_mode:
       name: 🌅 Adaptive Lighting Mode
       description: "Choose between Auto mode (recommended brightness and color temperature by time of day) or Advanced mode (custom settings)."
       selector:
@@ -154,7 +154,7 @@ blueprint:
           min: 2000
           max: 6500
           unit_of_measurement: "K"
-              humidity_sensor:
+    humidity_sensor:
       name: 🌫 Humidity Sensor
       description: "Select a humidity sensor to automate the bathroom fan."
       default: {}
