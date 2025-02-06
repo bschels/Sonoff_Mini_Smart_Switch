@@ -2,8 +2,8 @@ blueprint:
   name: Sonoff Mini Smart Switch Blueprint (Enhanced)
   description: >
     This blueprint provides basic control over Sonoff devices using a simple “dumb” switch.
-    You can select your Sonoff device’s model (MiniR4M, MiniR4, ZBMINIR2, or Other). In addition,
-    choose the category of the target device (e.g., Light, Fan, or Other) and whether it is smart or non‐smart.
+    You can select your Sonoff device’s model (MiniR4M, MiniR4, ZBMINIR2, or Other) and choose the category of the target
+    device (e.g., Light, Fan, or Other) and whether it is smart or non‐smart.
     
     **Operating Modes:**
     - **toggle:** Directly toggles the target entity.
@@ -30,9 +30,7 @@ blueprint:
       description: "Select your Sonoff device that detects the button press."
       selector:
         device:
-          integration:
-            - sonofflan
-            - zha
+          # Dynamic integration filtering is not allowed; devices are filtered by manufacturer.
           manufacturer: ITEAD
     switch_mode:
       name: Operating Mode
