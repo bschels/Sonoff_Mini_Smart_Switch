@@ -1,7 +1,11 @@
 blueprint:
-  name: Sonoff Mini Smart Switch Blueprint (Enhanced)
+  name: Sonoff Mini Smart Switch Blueprint (Enhanced – Sensor Trigger)
   description: >
     This blueprint provides basic control over Sonoff devices using a simple “dumb” switch.
+    Instead of triggering on a device event, it uses a sensor entity that reports the button action.
+    For example, if your Sonoff device updates its state with an attribute or sensor value (such as "single")
+    when pressed, this blueprint will trigger.
+    
     You can select your Sonoff device’s model (MiniR4M, MiniR4, ZBMINIR2, or Other) and choose the category of the target
     device (e.g., Light, Fan, or Other) and whether it is smart or non‐smart.
     
@@ -25,13 +29,12 @@ blueprint:
             - MiniR4
             - ZBMINIR2
             - Other
-    sonoff_device:
-      name: Sonoff Device
-      description: "Select your Sonoff device that detects the button press."
+    action_sensor:
+      name: Action Sensor
+      description: "Select the sensor entity that reports the button action (e.g., changes to 'single' on a button press)."
       selector:
-        device:
-          # Dynamic integration filtering is not allowed; devices are filtered by manufacturer.
-          manufacturer: ITEAD
+        entity:
+          domain: sensor
     switch_mode:
       name: Operating Mode
       description: >
@@ -109,14 +112,9 @@ blueprint:
           domain: sensor
       default: ""
 trigger:
-  - platform: device
-    device_id: !input sonoff_device
-    domain: sonofflan
-    type: button_short_press
-  - platform: device
-    device_id: !input sonoff_device
-    domain: zha
-    type: button_short_press
+  - platform: state
+    entity_id: !input action_sensor
+    to: "single"
 condition: []
 action:
   - choose:
