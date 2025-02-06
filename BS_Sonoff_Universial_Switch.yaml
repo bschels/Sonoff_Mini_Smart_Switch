@@ -1,62 +1,77 @@
 blueprint:
-  name: ⚡ Sonoff Smart Switch - MiniR4M, MiniR4, ZBMINIR2 & More
+  name: ⚡ Sonoff Universal Smart Switch
   description: |
-    🔌 **Turn your traditional switch into a smart switch!**
+    🔌 **Customize Your Sonoff Smart Switch Setup!**
     
-    This blueprint allows a **Sonoff MiniR4M, MiniR4, ZBMINIR2, and other Sonoff devices** to control various types of devices with intelligent automation:
+    This blueprint lets you use **Sonoff MiniR4M, MiniR4, ZBMINIR2, and other Sonoff devices** to control different types of devices and configure their behavior.
+    
+    🏠 **Device Selection:** Choose your Sonoff model and what device you want to control, and the blueprint will adapt accordingly.
+    
+    **Supported Sonoff Devices & Setup Requirements:**
+    - 🟢 **Sonoff MiniR4M** → Relay detachment enabled by default.
+    - 🔵 **Sonoff MiniR4** → Supports relay detachment (enable manually in eWeLink).
+    - 🟠 **Sonoff ZBMINIR2** → Zigbee model with local control.
+    - 🔴 **Sonoff TX Series** → Wall touch switch with multiple buttons.
+    - ⚪ **Sonoff BasicR3** → Simple Wi-Fi relay switch.
+    - ⚫ **Sonoff S26** → Smart plug with remote control.
+    - ⚙️ **Other Sonoff Models** → Default settings applied.
+    
+    **What Can You Control?**
     - 💡 **Smart Lamp** (Relay detachment recommended)
     - 💡 **Dumb Lamp** (Relay toggles power)
     - 🌬 **Bathroom Fan** (Manual & humidity-based automation)
     - 🔥 **Heater**
     - 💨 **Humidifier**
-    - ⚙️ **Other Smart or Non-Smart Devices**
+    - ⚙️ **Any Smart or Non-Smart Device**
     
-    **Supported Sonoff Devices & Setup Requirements:**
-    - 🟢 **Sonoff MiniR4M** → Relay detachment **enabled by default**. 
-      - ⚠️ **Setup:** If controlling a **smart lamp**, go to **Relay Settings** in the eWeLink app and enable **Detach Relay Mode**.
-    - 🔵 **Sonoff MiniR4** → Similar to MiniR4M, supports switch automation.
-      - ⚠️ **Setup:** Enable **Detach Relay Mode** if using with a smart lamp.
-    - 🟠 **Sonoff ZBMINIR2** → Zigbee model with local control.
-      - ⚠️ **Setup:** No relay detachment needed, but ensure it's paired with Home Assistant via Zigbee.
-    - 🔴 **Sonoff TX Series** → Wall touch switch with multiple buttons.
-      - ⚠️ **Setup:** Use **Scene Mode** in eWeLink for multiple touch actions.
-    - ⚪ **Sonoff BasicR3** → Simple Wi-Fi relay switch for general automation.
-      - ⚠️ **Setup:** Default relay mode, no detachment needed.
-    - ⚫ **Sonoff S26** → Smart plug with remote control.
-      - ⚠️ **Setup:** No relay detachment required, just connect via LAN mode.
-    - ⚙️ **Other Sonoff Models** → Default settings will be applied.
-    
-    **Device Selection**
-    - 🏠 **Choose what you are controlling:** Select a mode (Smart Lamp, Dumb Lamp, Bathroom Fan, Generic Smart Device, Generic Non-Smart Device), and only relevant options will appear.
-    
-    **Bathroom Fan Mode:**
-    - 🖲 **Manual Mode** → Press the switch to run the fan for a set time (odor control).
+    **Bathroom Fan Features:**
+    - 🖲 **Manual Mode** → Press the switch to run the fan for a set time.
     - 🌫 **Automatic Mode** → The fan turns on when humidity exceeds a threshold.
     - 🚿 **Shower Detection** → Detects rapid humidity increases and starts the fan.
     - 🔄 **Hybrid Mode** → The fan runs manually when pressed and also activates via humidity detection.
-    - ⏳ **Custom Fan Runtime** → Set a timer for how long the fan runs after activation.
-    - 📉 **Auto Off by Humidity** → Optionally turn off the fan when humidity drops below a defined threshold.
+    - ⏳ **Custom Fan Runtime** → Set how long the fan runs after activation.
+    - 📉 **Auto Off by Humidity** → Optionally turn off the fan when humidity drops.
     
-    **Supported Switch Types & Behavior:**
-    - 🎚 **Rocker Switch**: Stays in either "on" or "off" position. Best for simple toggling but doesn't support double or long press.
-    - 🔘 **Push Button**: A momentary switch that springs back. Fully supports **single, double, and long press** actions.
+    **Switch Type Behavior:**
+    - 🎚 **Rocker Switch** → Stays in either "on" or "off" position. Best for simple toggling.
+    - 🔘 **Push Button** → A momentary switch that supports **single, double, and long press** actions.
     
-    **Enhanced Features:**
+    **Additional Features:**
     - 🔄 **Relay Detachment (Optional)** → Use the switch independently or toggle the relay.
-    - 🎭 **Multi-Click Actions** → Customize actions for single, double, and long press.
-    - 🎬 **Scene Activation** → Trigger Home Assistant scenes (e.g., "Movie Night").
-    - 🌞 **Adaptive Lighting** → Auto-adjust brightness & color temperature by time of day.
+    - 🎭 **Multi-Click Actions** → Customize single, double, and long press actions.
+    - 🎬 **Scene Activation** → Trigger Home Assistant scenes.
+    - 🌞 **Adaptive Lighting** → Adjust brightness & color temperature by time of day.
     - ⚡ **Energy Monitoring** → Get notifications if power usage is too high.
-    - 📊 **Usage Tracking** → Logs switch toggles for analysis in HA dashboards.
-    - 🔔 **Notifications** → Alerts when a device is turned on/off or power exceeds threshold.
+    - 📊 **Usage Tracking** → Log switch toggles for analysis.
+    - 🔔 **Notifications** → Alerts when a device turns on/off.
     - 🔄 **Control Multiple Devices** → Toggle multiple devices at once.
-    - 🔒 **Safety Lock** → Disable switch input when the switch is no longer needed.
-  
+    - 🔒 **Safety Lock** → Disable switch input when needed.
+    - 🟢 **Easy Mode & Advanced Mode** → Quick setup for beginners or full customization for advanced users.
+    
   domain: automation
   input:
+    easy_mode:
+      name: 🟢 Easy Mode
+      description: "Enable Easy Mode for a simplified setup or Advanced Mode for full customization."
+      default: true
+      selector:
+        boolean:
+    device_type:
+      name: 📌 What Do You Want to Control?
+      description: "Choose the type of device you want to control."
+      selector:
+        select:
+          options:
+            - "Smart Lamp"
+            - "Dumb Lamp"
+            - "Bathroom Fan"
+            - "Heater"
+            - "Humidifier"
+            - "Other Device"
+          mode: dropdown
     sonoff_model:
       name: 🏷 Sonoff Model
-      description: "Select your Sonoff device. This will adjust settings automatically and provide setup instructions."
+      description: "Select your Sonoff device. This will adjust settings automatically."
       selector:
         select:
           options:
@@ -69,9 +84,50 @@ blueprint:
             - "Other"
           mode: dropdown
       default: "Sonoff MiniR4M"
+    switch_type:
+      name: 🎚 Switch Type
+      description: "Select your switch type."
+      selector:
+        select:
+          options:
+            - "Rocker"
+            - "Push Button"
+          mode: dropdown
+    controlled_device:
+      name: 🎛 Device to Control
+      description: "Select the device you want to control."
+      default: {}
+      selector:
+        target:
+          entity:
+            domain: [switch, fan, climate, light]
+    enable_relay_detach:
+      name: 🔄 Detach Relay
+      description: "Detach relay for smart lamps so the switch acts as a trigger without cutting power."
+      default: false
+      selector:
+        boolean:
+    enable_adaptive_lighting:
+      name: 🌞 Adaptive Lighting Mode
+      description: "Enable automatic brightness and color temperature adjustments."
+      default: false
+      selector:
+        boolean:
+    enable_energy_monitoring:
+      name: ⚡ Energy Monitoring
+      description: "Enable notifications if power usage is too high."
+      default: false
+      selector:
+        boolean:
+    enable_usage_tracking:
+      name: 📊 Usage Tracking
+      description: "Enable logging of switch toggles for analytics."
+      default: false
+      selector:
+        boolean:
     enable_safety_lock:
       name: 🔒 Disable Switch Input
-      description: "Disable the physical switch input when it is no longer needed."
+      description: "Disable the physical switch input if you don’t need manual control."
       default: false
       selector:
         boolean:
@@ -84,86 +140,16 @@ blueprint:
           min: 0
           max: 3600
           unit_of_measurement: seconds
-    switch_type:
-      name: 🎚 Switch Type
-      description: "Select your switch type: Rocker (fixed on/off position) or Push Button (momentary press, supports multi-click actions)."
-      selector:
-        select:
-          options:
-            - "Rocker"
-            - "Push Button"
-          mode: dropdown
-    controlled_device:
-      name: 🎛 Device to Control (Optional)
-      description: "Select the device to control."
-      default: {}
-      selector:
-        target:
-          entity:
-            domain: [switch, fan, climate, light]
-    enable_adaptive_lighting:
-      name: 🌞 Adaptive Lighting Mode
-      description: "Enable automatic brightness and color temperature adjustments based on time of day."
-      default: false
-      selector:
-        boolean:
-    adaptive_lighting_mode:
-      name: 🌅 Adaptive Lighting Mode
-      description: "Choose between Auto mode (recommended brightness and color temperature by time of day) or Advanced mode (custom settings)."
-      selector:
-        select:
-          options:
-            - "Off"
-            - "Auto Mode"
-            - "Advanced Mode"
-          mode: dropdown
-      default: "Off"
-    brightness_morning:
-      name: ☀️ Morning Brightness
-      description: "Set brightness for morning hours (6AM - 12PM)."
-      default: 80
-      selector:
-        number:
-          min: 1
-          max: 100
-          unit_of_measurement: "%"
-    brightness_evening:
-      name: 🌙 Evening Brightness
-      description: "Set brightness for evening hours (6PM - 12AM)."
-      default: 60
-      selector:
-        number:
-          min: 1
-          max: 100
-          unit_of_measurement: "%"
-    color_temp_morning:
-      name: ☀️ Morning Color Temperature
-      description: "Set color temperature for morning hours."
-      default: 4000
-      selector:
-        number:
-          min: 2000
-          max: 6500
-          unit_of_measurement: "K"
-    color_temp_evening:
-      name: 🌙 Evening Color Temperature
-      description: "Set color temperature for evening hours."
-      default: 2700
-      selector:
-        number:
-          min: 2000
-          max: 6500
-          unit_of_measurement: "K"
     humidity_sensor:
-      name: 🌫 Humidity Sensor
-      description: "Select a humidity sensor to automate the bathroom fan."
+      name: 🌫 Humidity Sensor (For Bathroom Fan)
+      description: "Select a humidity sensor to automate the fan."
       default: {}
       selector:
         entity:
           domain: sensor
     humidity_threshold:
       name: 📈 Humidity Threshold
-      description: "Set the humidity level at which the fan should turn on automatically."
+      description: "Set the humidity level to activate the fan."
       default: 70
       selector:
         number:
@@ -172,7 +158,7 @@ blueprint:
           unit_of_measurement: "%"
     humidity_off_threshold:
       name: 📉 Auto Off Humidity Threshold
-      description: "Set the humidity level at which the fan should turn off automatically (optional)."
+      description: "Set the humidity level at which the fan should turn off."
       default: 50
       selector:
         number:
@@ -194,6 +180,6 @@ blueprint:
       default: false
       selector:
         boolean:
-
+  
 mode: restart
 max_exceeded: silent
