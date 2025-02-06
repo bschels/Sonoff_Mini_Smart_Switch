@@ -1,18 +1,18 @@
 blueprint:
-  name: Sonoff Mini Smart Switch Blueprint (Enhanced – Sensor Trigger)
+  name: Sonoff Mini Smart Switch Blueprint (Enhanced – Sensor Trigger with IKEA Bulb Option)
   description: >
     This blueprint provides control over Sonoff devices using a sensor-based button press.
-    It supports multiple device categories (smart lights, smart fans, non-smart devices, etc.)
+    It supports multiple device categories (smart lights, IKEA bulbs, smart fans, non-smart devices, etc.)
     and offers refined fan control modes:
     
     - **manual:** Run the fan for a preset duration.
     - **auto:** Activate the fan only if a humidity sensor’s reading exceeds a threshold.
-    - **both:** Turn the fan on immediately and, after the manual duration,
-      turn it off only if the humidity is below the threshold. This allows you to
-      use manual activation (for instance, when you want extra ventilation) while still
+    - **both:** Turn the fan on immediately, then after the manual duration,
+      turn it off only if humidity is below the threshold. This allows you to
+      use manual activation (for instance, when you need extra ventilation) while still
       benefiting from auto control during a shower.
     
-    For smart lights, the blueprint simply toggles the light.
+    For smart lights and IKEA bulbs, the blueprint toggles the light.
     For non‑smart devices, it will trigger a scene (if provided) or toggle the entity.
   domain: automation
   input:
@@ -32,15 +32,18 @@ blueprint:
       name: Action Sensor
       description: >
         Select the sensor entity that reports the button action.
-        (For example, a sensor that changes its state to "single" when pressed.)
+        It is recommended to choose a sensor whose entity_id includes “_action”.
       selector:
         entity:
           domain: sensor
+          filter:
+            include:
+              - entity_id: "sensor.*_action"
     switch_mode:
       name: Operating Mode
       description: >
-        Choose the operating mode for how the target entity is controlled:
-        - **toggle:** Directly call the relevant service (e.g. toggle a light or run a fan sequence).
+        Choose how to control the target entity:
+        - **toggle:** Directly call the relevant service (for example, toggling a light or running a fan sequence).
         - **detached:** Fire an event for custom automations.
       default: toggle
       selector:
@@ -50,9 +53,23 @@ blueprint:
             - detached
     target_entity:
       name: Target Entity
-      description: "Select the entity you want to control (e.g., light, fan, switch, etc.)."
+      description: >
+        Select the entity you want to control.
+        Use this if your target device is not an IKEA bulb.
       selector:
         entity: {}
+    ikea_bulb:
+      name: IKEA Bulb
+      description: >
+        (Optional) Select your IKEA bulb for easier filtering.
+        When the Target Device Category is set to "IKEA Bulb (Smart)", this value will be used.
+      selector:
+        entity:
+          domain: light
+          filter:
+            include:
+              - entity_id: "light.ikea_*"
+      default: ""
     target_device_category:
       name: Target Device Category
       description: >
@@ -62,6 +79,7 @@ blueprint:
         select:
           options:
             - "Light (Smart)"
+            - "IKEA Bulb (Smart)"
             - "Light (Non-Smart)"
             - "Fan (Smart)"
             - "Fan (Non-Smart)"
@@ -102,10 +120,14 @@ blueprint:
           unit_of_measurement: '%'
     sensor_entity:
       name: Humidity Sensor
-      description: "(Optional) The humidity sensor entity used for auto fan control."
+      description: "(Optional) The humidity sensor used for auto fan control."
       selector:
         entity:
           domain: sensor
+          filter:
+            include:
+              - attribute: device_class
+                value: humidity
       default: ""
     # --- Non-Smart Device Options ---
     non_smart_scene:
@@ -197,6 +219,19 @@ action:
                   - service: light.toggle
                     target:
                       entity_id: !input target_entity
+              # --- IKEA Bulb Control ---
+              - conditions:
+                  - condition: template
+                    value_template: "{{ target_device_category == 'IKEA Bulb (Smart)' }}"
+                sequence:
+                  - service: light.toggle
+                    target:
+                      entity_id: >
+                        {% if ikea_bulb == "" %}
+                          {{ target_entity }}
+                        {% else %}
+                          {{ ikea_bulb }}
+                        {% endif %}
               # --- Non-Smart Devices and Other ---
               - conditions:
                   - condition: template
